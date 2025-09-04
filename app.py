@@ -338,7 +338,7 @@ st.markdown(
 
 # --- D. Logo ---
 with open("Logo.png", "rb") as f:
-    encoded = st.secrets["LOGO_BASE64"]
+    encoded = base64.b64encode(f.read()).decode()
 
 # Sisipkan logo di pojok kiri atas
 st.markdown(
