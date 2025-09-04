@@ -6,4 +6,5 @@ trafilatura
 pandas
 openpyxl
 xlsxwriter
-st-aggrid
+streamlit-aggrid==0.3.4.post3
+
