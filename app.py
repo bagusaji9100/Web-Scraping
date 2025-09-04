@@ -164,7 +164,7 @@ def show_aggrid(df: pd.DataFrame):
     gridOptions = gb.build()
 
     # Layout header dan tombol sejajar
-    col1, col2 = st.columns([8, 1.5])
+    col1, col2 = st.columns([8, 2])
     with col1:
         st.markdown(
             """
@@ -330,6 +330,12 @@ st.markdown(
             background: #FFF !important;     /* memastikan latar tetap putih */
             padding: 4px 8px !important;     /* konsisten dengan tinggi kontrol */
             line-height: 1.4 !important;
+        }
+        /* Ubah warna semua icon header agar terlihat */
+        [data-testid="stActionButtonIcon"] svg,
+        [data-testid="stToolbar"] svg {
+        fill: black !important;
+        stroke: black !important;
         }
     </style>
     """,
