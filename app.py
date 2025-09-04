@@ -331,11 +331,11 @@ st.markdown(
             padding: 4px 8px !important;     /* konsisten dengan tinggi kontrol */
             line-height: 1.4 !important;
         }
-        /* Ubah warna semua icon header agar terlihat */
-        [data-testid="stActionButtonIcon"] svg,
-        [data-testid="stToolbar"] svg {
+        /* Paksa semua icon di toolbar (kanan atas) jadi hitam */
+        [data-testid="stToolbar"] button svg {
         fill: black !important;
         stroke: black !important;
+        color: black !important;
         }
     </style>
     """,
