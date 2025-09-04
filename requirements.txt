@@ -1,0 +1,9 @@
+streamlit
+google-generativeai
+pygooglenews
+googlenewsdecoder
+trafilatura
+pandas
+openpyxl
+xlsxwriter
+st-aggrid
