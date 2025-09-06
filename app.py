@@ -266,10 +266,6 @@ st.set_page_config(page_title="Scraper Berita PDRB", layout="wide")
 st.markdown(
     """
     <style>
-        /* Hilangkan tombol GitHub di toolbar Streamlit */
-        button[title="View source on GitHub"] {
-            display: none;
-        }
         /* ===== Global ===== */
         .stApp, header[data-testid="stHeader"] { background: #FFF !important; color: #000 !important; }
         header[data-testid="stHeader"] *,
