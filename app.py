@@ -170,15 +170,16 @@ def show_aggrid(df: pd.DataFrame):
     if "URL" in df.columns:
         gb.configure_column(
             "URL",
-            header_name="Link Artikel",
-            cellRenderer='''function(params) {
-                if (params.value) {
-                    return `<a href="${params.value}" target="_blank" style="color:#1a73e8; text-decoration:underline;">Buka</a>`;
+            cellRenderer='''
+                function(params) {
+                    if (params.value) {
+                        return `<a href="${params.value}" target="_blank" style="color:#1a73e8; font-weight:bold;">🔗 Buka</a>`;
+                    }
+                    return "";
                 }
-                return "";
-            }''',
-            cellStyle={"whiteSpace": "normal", "wordBreak": "break-word"}
+            '''
         )
+
     
     # baru build di akhir
     gridOptions = gb.build()
