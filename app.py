@@ -327,8 +327,9 @@ st.markdown(
             text-align: center; 
             font-size: 18px !important; 
             font-weight: normal;
-            margin: 0 0 0 0 !important;
-            color: #555; }
+            margin: 0 !important;
+            color: #555; 
+            line-height: 1.1; }
 
         /* ===== FINAL OVERRIDE (HARUS DI BAWAH) =====*/
         div[data-baseweb="select"] > div {
