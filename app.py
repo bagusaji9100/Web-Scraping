@@ -267,7 +267,7 @@ st.markdown(
     """
     <style>
         /* ===== Global ===== */
-        .stApp, header[data-testid="stHeader"] { background: #FFF !important; color: #000 !important; border-bottom: 3px solid #e7dfdd !important; height: 70px !important; }
+        .stApp, header[data-testid="stHeader"] { background: #FFF !important; color: #000 !important; border-bottom: 3px solid #e7dfdd !important; height: }
         header[data-testid="stHeader"] *,
         .stMarkdown, .stText, .stTitle, .stSubheader, .stHeader, .stCaption,
         div[role="radiogroup"] * { color: #000 !important; }
@@ -347,7 +347,7 @@ st.markdown(
         [data-testid="stHeader"]::before {{
             content: "";
             position: absolute;
-            top: 5px; left: 20px;
+            top: 0px; left: 0px;
             height: 250px; width: 250px;
             background-image: url("data:image/png;base64,{encoded}");
             background-size: contain;
