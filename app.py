@@ -177,8 +177,6 @@ def show_aggrid(df: pd.DataFrame):
         }
         return "";
     }''',
-    autoHeight=True,
-    wrapText=True
 )
 
 
