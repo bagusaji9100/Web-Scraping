@@ -322,7 +322,7 @@ st.markdown(
         .centered-title {
             text-align: center; font-size: 37px !important; font-weight: bold;
             margin: 0 !important;
-            line-height: 1.1; }
+            line-height: 0.8; }
         .centered-subtitle {
             text-align: center; 
             font-size: 18px !important; 
