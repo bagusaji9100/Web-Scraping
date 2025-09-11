@@ -348,7 +348,7 @@ st.markdown(
             content: "";
             position: absolute;
             top: 0px; left: 0px;
-            height: 250px; width: 250px;
+            height: 220px; width: 220px;
             background-image: url("data:image/png;base64,{encoded}");
             background-size: contain;
             background-repeat: no-repeat;
