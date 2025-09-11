@@ -368,8 +368,10 @@ st.markdown(
 # Tambah jarak agar judul tidak menabrak logo
 st.markdown("<div style='padding-top:10px'></div>", unsafe_allow_html=True)
 st.markdown(
-    "<h1 class='centered-title'>PAPEDA</h1>",
-    "<div class='centered-subtitle'>Platform Analisis Perekonomian Daerah</div>",
+    """
+    <h1 class='centered-title'>PAPEDA</h1>
+    <div class='centered-subtitle'>Platform Analisis Perekonomian Daerah</div>
+    """,
     unsafe_allow_html=True
 )
 
