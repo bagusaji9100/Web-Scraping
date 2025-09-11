@@ -161,13 +161,12 @@ def show_aggrid(df: pd.DataFrame):
     gb.configure_pagination(paginationPageSize=10)   # pagination
     gb.configure_side_bar()                          # sidebar filter
     gb.configure_default_column(editable=False, groupable=True)
-    gridOptions = gb.build()
     gb.configure_grid_options(
-    enableRangeSelection=True,   # bisa block sel
-    enableCellTextSelection=True # bisa select text
+        enableRangeSelection=True,   # bisa block sel
+        enableCellTextSelection=True # bisa select text
     )
     gb.configure_selection("multiple", use_checkbox=False)
-
+    
     if "URL" in df.columns:
         gb.configure_column(
             "URL",
@@ -177,8 +176,13 @@ def show_aggrid(df: pd.DataFrame):
                     return `<a href="${params.value}" target="_blank" style="color:#1a73e8; text-decoration:underline;">Buka</a>`;
                 }
                 return "";
-            }'''
+            }''',
+            cellStyle={"whiteSpace": "normal", "wordBreak": "break-word"}
         )
+    
+    # baru build di akhir
+    gridOptions = gb.build()
+
 
     # Layout header dan tombol sejajar
     col1, col2 = st.columns([8, 2])
