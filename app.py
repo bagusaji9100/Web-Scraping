@@ -267,7 +267,7 @@ st.markdown(
     """
     <style>
         /* ===== Global ===== */
-        .stApp, header[data-testid="stHeader"] { background: #FFF !important; color: #000 !important; border-bottom: 3px solid #e7dfdd !important; height: 70px; }
+        .stApp, header[data-testid="stHeader"] { background: #FFF !important; color: #000 !important; border-bottom: 3px solid #e7dfdd !important; height: 70px !important; }
         header[data-testid="stHeader"] *,
         .stMarkdown, .stText, .stTitle, .stSubheader, .stHeader, .stCaption,
         div[role="radiogroup"] * { color: #000 !important; }
