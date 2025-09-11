@@ -362,7 +362,7 @@ st.markdown(
 # Tambah jarak agar judul tidak menabrak logo
 st.markdown("<div style='padding-top:10px'></div>", unsafe_allow_html=True)
 st.markdown(
-    "<h1 class='centered-title'>Web Scraping Berita Ekonomi</h1>",
+    "<h1 class='centered-title'>Pengumpulan Analisis Perkembangan Eknomi Daerah</h1>",
     unsafe_allow_html=True
 )
 
