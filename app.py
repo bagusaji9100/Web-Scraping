@@ -323,6 +323,12 @@ st.markdown(
             text-align: center; font-size: 37px !important; font-weight: bold;
             margin: 0 0 10px 0 !important;
         }
+        .centered-subtitle {
+            text-align: center; 
+            font-size: 18px !important; 
+            font-weight: normal;
+            margin: 0 0 20px 0 !important;
+            color: #555; }
 
         /* ===== FINAL OVERRIDE (HARUS DI BAWAH) =====*/
         div[data-baseweb="select"] > div {
@@ -363,6 +369,7 @@ st.markdown(
 st.markdown("<div style='padding-top:10px'></div>", unsafe_allow_html=True)
 st.markdown(
     "<h1 class='centered-title'>PAPEDA</h1>",
+    "<div class='centered-subtitle'>Platform Analisis Perekonomian Daerah</div>",
     unsafe_allow_html=True
 )
 
