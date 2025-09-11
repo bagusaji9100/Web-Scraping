@@ -321,8 +321,8 @@ st.markdown(
         /* Judul */
         .centered-title {
             text-align: center; font-size: 37px !important; font-weight: bold;
-            margin: 0 0 0 0 !important;
-        }
+            margin: 0 !important;
+            line-height: 1.1; }
         .centered-subtitle {
             text-align: center; 
             font-size: 18px !important; 
