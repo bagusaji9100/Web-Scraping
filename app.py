@@ -162,6 +162,25 @@ def show_aggrid(df: pd.DataFrame):
     gb.configure_side_bar()                          # sidebar filter
     gb.configure_default_column(editable=False, groupable=True)
     gridOptions = gb.build()
+    gb.configure_grid_options(
+    enableRangeSelection=True,   # bisa block sel
+    enableCellTextSelection=True # bisa select text
+    )
+    gb.configure_selection("multiple", use_checkbox=False)
+
+    gb.configure_column(
+    "URL",
+    header_name="URL",
+    cellRenderer='''function(params) {
+        if (params.value) {
+            return `<a href="${params.value}" target="_blank" style="color:#1a73e8; text-decoration:underline;">Buka</a>`;
+        }
+        return "";
+    }''',
+    autoHeight=True,
+    wrapText=True
+)
+
 
     # Layout header dan tombol sejajar
     col1, col2 = st.columns([8, 2])
@@ -189,7 +208,8 @@ def show_aggrid(df: pd.DataFrame):
         gridOptions=gridOptions,
         theme="light",
         fit_columns_on_grid_load=False,
-        suppressRowClickSelection=True
+        suppressRowClickSelection=True,
+        allow_unsafe_jscode=True
     )
 
 # --- D. Fungsi jalankan scraper (utama) ---
