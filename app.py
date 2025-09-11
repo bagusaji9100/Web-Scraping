@@ -325,7 +325,7 @@ st.markdown(
             line-height: 1; }
         .centered-subtitle {
             text-align: center; 
-            font-size: 18px !important; 
+            font-size: 23px !important; 
             font-weight: normal;
             margin: 0 !important;
             color: #555; 
@@ -375,7 +375,8 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
-st.markdown("<div style='padding-top:30px'></div>", unsafe_allow_html=True)
+st.markdown("<div style='padding-top:15px'></div>", unsafe_allow_html=True)
+
 # --- F. Kotak Input (Wilayah, Lapangan Usaha, Periode) ---
 col1, col2, _, col3, _, col4, col5 = st.columns([0.8, 4, 0.2, 4, 0.2, 4, 0.8])
 with col2:
