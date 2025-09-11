@@ -347,7 +347,7 @@ st.markdown(
         [data-testid="stHeader"]::before {{
             content: "";
             position: absolute;
-            top: 0px; left: 0px;
+            top: -5px; left: 0px;
             height: 200px; width: 200px;
             background-image: url("data:image/png;base64,{encoded}");
             background-size: contain;
