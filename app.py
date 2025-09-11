@@ -322,14 +322,14 @@ st.markdown(
         .centered-title {
             text-align: center; font-size: 37px !important; font-weight: bold;
             margin: 0 !important;
-            line-height: 0.8; }
+            line-height: 1; }
         .centered-subtitle {
             text-align: center; 
             font-size: 18px !important; 
             font-weight: normal;
             margin: 0 !important;
             color: #555; 
-            line-height: 1.1; }
+            line-height: 1; }
 
         /* ===== FINAL OVERRIDE (HARUS DI BAWAH) =====*/
         div[data-baseweb="select"] > div {
