@@ -167,24 +167,6 @@ def show_aggrid(df: pd.DataFrame):
     )
     gb.configure_selection("multiple", use_checkbox=False)
     
-    if "URL" in df.columns:
-        gb.configure_column(
-            "URL",
-            header_name="Link Berita",
-            cellRenderer='''
-                function(params) {
-                    if (params.value) {
-                        return `<a href="${params.value}" target="_blank"
-                                   style="color:#1a73e8; text-decoration:underline; font-weight:bold;">
-                                   ${params.value}
-                                </a>`;
-                    }
-                    return "";
-                }
-            '''
-        )
-
-    
     # baru build di akhir
     gridOptions = gb.build()
 
@@ -215,8 +197,7 @@ def show_aggrid(df: pd.DataFrame):
         gridOptions=gridOptions,
         theme="light",
         fit_columns_on_grid_load=False,
-        suppressRowClickSelection=True,
-        allow_unsafe_jscode=True
+        suppressRowClickSelection=True
     )
 
 # --- D. Fungsi jalankan scraper (utama) ---
