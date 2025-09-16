@@ -378,7 +378,8 @@ st.markdown(
 st.markdown("<div style='padding-top:30px'></div>", unsafe_allow_html=True)
 st.markdown(
     """
-    <h1 class='centered-title'>Web Scraping Fenomena Ekonomi</h1>
+    <h1 class='centered-title'>PAPEDA</h1>
+    <h2 class='centered-subtitle'>Pengumpulan Analisis Perkembangan Ekonomi Daerah</h2>
     """,
     unsafe_allow_html=True
 )
