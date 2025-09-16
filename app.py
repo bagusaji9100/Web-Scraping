@@ -379,7 +379,7 @@ st.markdown("<div style='padding-top:30px'></div>", unsafe_allow_html=True)
 st.markdown(
     """
     <h1 class='centered-title'>PAPEDA</h1>
-    <h2 class='centered-subtitle'>Pengumpulan Analisis Perkembangan Ekonomi Daerah</h2>
+    <div class='centered-subtitle'>Pengumpulan Fenomena berbasis data</div>
     """,
     unsafe_allow_html=True
 )
