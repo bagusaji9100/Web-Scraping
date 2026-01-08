@@ -1,17 +1,19 @@
 # ============================================================
-# APP STREAMLIT UNTUK WEB SCRAPING PDRB
+# PAPEDA - Scraper Berita PDRB (CEPAT, TANPA GEMINI & TANPA RINGKASAN)
+# Output: Tanggal, Judul, Sumber, Wilayah, Usaha, URL
 # ============================================================
+
 import streamlit as st
-import google.generativeai as genai
-import requests, trafilatura, re, time, itertools
-from typing import List, Dict, Optional
+import time
+import itertools
+from typing import List, Dict, Tuple, Any
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime
+import datetime as dt
+import base64
+import pandas as pd
 from pygooglenews import GoogleNews
 from googlenewsdecoder import gnewsdecoder
-import datetime as dt
-from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime
-import base64, xlsxwriter, openpyxl
-import pandas as pd
 from st_aggrid import AgGrid, GridOptionsBuilder
 from io import BytesIO
 
@@ -19,112 +21,13 @@ from io import BytesIO
 # 1. KONFIGURASI & VARIABEL GLOBAL
 # ============================================================
 
-# --- A. Konfigurasi Gemini ---
-
-# --- A. Konfigurasi Gemini ---
-API_KEYS = st.secrets["API_KEYS"]
-current_key_idx = 0
-
-# Ambil model dengan rotasi key
-def get_rotating_model():
-    global current_key_idx
-    key = API_KEYS[current_key_idx]
-    current_key_idx = (current_key_idx + 1) % len(API_KEYS)
-    genai.configure(api_key=key)
-    return genai.GenerativeModel("gemini-2.0-flash")
-
-# --- B. Inisialisasi Google News ---
-gn = GoogleNews(lang='id')
-
-# --- C. Variabel default ---
-DEFAULT_WILAYAH = []
-DEFAULT_LAPANGAN_USAHA = []
+gn = GoogleNews(lang="id")
 DATE_DELTA = dt.timedelta(days=30)
-SEEN_URLS = set()
 
 # ============================================================
-# 2. LAYANAN EKSTERNAL
+# 2. CSS (DOWNLOAD BUTTON) - SAMA SEPERTI SEBELUMNYA
 # ============================================================
 
-# --- A. Mencari Artikel Google News ---
-def cari_artikel_google_news(keyword: str, START_DATE: dt.date, END_DATE: dt.date) -> List[dict]:
-    all_entries, current_date = [], START_DATE
-    while current_date < END_DATE:
-        end_date_batch = min(current_date + DATE_DELTA, END_DATE)
-        try:
-            hasil = gn.search(
-                keyword,
-                from_=current_date.strftime("%Y-%m-%d"),
-                to_=end_date_batch.strftime("%Y-%m-%d")
-            )
-            for entry in hasil["entries"]:
-                if entry.link not in SEEN_URLS:
-                    SEEN_URLS.add(entry.link)
-                    all_entries.append(entry)
-        except Exception as e:
-            st.warning(f"⚠️ Gagal cari berita {current_date}: {e}")
-        current_date = end_date_batch
-        time.sleep(1)
-    return all_entries
-
-# --- B. Ambil Url Asli ---
-def ambil_url_asli(entry: dict) -> str:
-    try:
-        decoded = gnewsdecoder(entry.link)
-        return decoded["decoded_url"] if decoded.get("status") else entry.link
-    except:
-        return entry.link
-
-# --- C. Ringkasan Gemini ---
-def ringkas_dengan_gemini(text: str, wilayah: str, usaha: str) -> str:
-    model = get_rotating_model()
-    prompt = (
-        f"Buat paragraf ringkas dan padu 2 kalimat dengan maksimal 40 kata. "
-        f"Paragraf fokus berkaitan dengan '{usaha}' di '{wilayah}'."
-        f"Jika teks TIDAK membahas tentang '{usaha}' di'{wilayah}' dan tidak memuat fenomena ekonomi yang berdampak pada kenaikan atau penurunan {usaha} di {wilayah}, tulis 'TIDAK RELEVAN'.\n\nTeks: {text}"
-    )
-    try:
-        return model.generate_content(prompt).text
-    except Exception as e:
-        return f"[Ringkasan gagal: {e}]"
-
-# ============================================================
-# 3. PEMROSESAN ARTIKEL
-# ============================================================
-
-# --- A. Filter Berita Relevan ---
-def teks_relevan_dengan_keyword(text: str, LAPANGAN_USAHA: List[str], WILAYAH: List[str]) -> bool:
-    text_low = text.lower()
-    usaha_match   = [kw for kw in LAPANGAN_USAHA if kw.lower() in text_low]
-    wilayah_match = [wil for wil in WILAYAH if wil.lower() in text_low]
-    if not usaha_match or not wilayah_match:
-        return None
-    return {"usaha": usaha_match, "wilayah": wilayah_match}
-
-# --- B. Ekstrak Isi Artikel ---
-def ekstrak_teks_artikel(url: str, LAPANGAN_USAHA: List[str], WILAYAH: List[str]) -> Optional[str]:
-    try:
-        res = requests.get(url, timeout=15)
-        if not res or not res.content:
-            return None
-        text = trafilatura.extract(res.content, output_format="txt")
-        if not text:
-            return None
-        text_clean = "\n".join([
-            p for p in text.split("\n")
-            if not re.search(r'(Baca juga|Artikel terkait|Editor|Penulis)', p, re.I)])
-        matches = teks_relevan_dengan_keyword(text_clean, LAPANGAN_USAHA, WILAYAH)
-        if not matches:
-            return None
-        return {"text": text_clean, "matches": matches}
-    except:
-        return None
-
-# ============================================================
-# 4. ORKESTRASI (untuk UI Streamlit)
-# ============================================================
-
-# --- A. CSS untuk tombol download ---
 st.markdown(
     """
     <style>
@@ -142,36 +45,36 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# --- B. Fungsi konversi DataFrame ke Excel (bytes) ---
+# ============================================================
+# 3. EXPORT EXCEL
+# ============================================================
+
 def to_excel(df: pd.DataFrame) -> bytes:
     output = BytesIO()
     with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
         df.to_excel(writer, index=False, sheet_name="Data")
     return output.getvalue()
 
-# --- C. Fungsi tampilkan tabel hasil scraping (AgGrid + tombol download) ---
+# ============================================================
+# 4. TABEL (AgGrid) - SAMA SEPERTI SEBELUMNYA
+# ============================================================
+
 def show_aggrid(df: pd.DataFrame):
-    # Bersihkan index jika masih ada
     df = df.reset_index(drop=True)
     if "index" in df.columns:
         df = df.drop(columns=["index"])
 
-    # Konfigurasi tampilan AgGrid
     gb = GridOptionsBuilder.from_dataframe(df)
-    gb.configure_pagination(paginationPageSize=10)   # pagination
-    gb.configure_side_bar()                          # sidebar filter
+    gb.configure_pagination(paginationPageSize=10)
+    gb.configure_side_bar()
     gb.configure_default_column(editable=False, groupable=True)
     gb.configure_grid_options(
-        enableRangeSelection=True,   # bisa block sel
-        enableCellTextSelection=True # bisa select text
+        enableRangeSelection=True,
+        enableCellTextSelection=True
     )
     gb.configure_selection("multiple", use_checkbox=False)
-    
-    # baru build di akhir
     gridOptions = gb.build()
 
-
-    # Layout header dan tombol sejajar
     col1, col2 = st.columns([8, 2])
     with col1:
         st.markdown(
@@ -191,7 +94,6 @@ def show_aggrid(df: pd.DataFrame):
             use_container_width=True
         )
 
-    # Render tabel menggunakan AgGrid
     AgGrid(
         df,
         gridOptions=gridOptions,
@@ -200,77 +102,218 @@ def show_aggrid(df: pd.DataFrame):
         suppressRowClickSelection=True
     )
 
-# --- D. Fungsi jalankan scraper (utama) ---
-def jalankan_scraper_streamlit(WILAYAH: List[str], LAPANGAN_USAHA: List[str], START_DATE: dt.date, END_DATE: dt.date):
-    semua_artikel = []
+# ============================================================
+# 5. SCRAPER CEPAT (PARALEL + CACHE + DEDUP)
+# ============================================================
 
-    # Kombinasi setiap wilayah & lapangan usaha → cari artikel
-    for w, u in itertools.product(WILAYAH, LAPANGAN_USAHA):
-        semua_artikel.extend(cari_artikel_google_news(f'"{w}"+"{u}"', START_DATE, END_DATE))
+@st.cache_data(ttl=3600, show_spinner=False)
+def cached_gnews_search(keyword: str, start_date: dt.date, end_date: dt.date) -> List[Dict[str, Any]]:
+    """
+    Cache hasil Google News untuk 1 keyword + 1 periode.
+    Disimpan sebagai list dict minimal (ringan & aman untuk cache).
+    """
+    all_entries: List[Dict[str, Any]] = []
+    current_date = start_date
 
-    # Jika kosong → tampilkan warning
-    if not semua_artikel:
-        st.warning("Tidak ada artikel ditemukan.")
+    while current_date < end_date:
+        end_date_batch = min(current_date + DATE_DELTA, end_date)
+        try:
+            hasil = gn.search(
+                keyword,
+                from_=current_date.strftime("%Y-%m-%d"),
+                to_=end_date_batch.strftime("%Y-%m-%d")
+            )
+            for e in hasil.get("entries", []):
+                # pygooglenews entry biasanya object
+                title = getattr(e, "title", None) or e.get("title", "-") or "-"
+                published = getattr(e, "published", None) or e.get("published", "") or ""
+                link = getattr(e, "link", None) or e.get("link", "") or ""
+
+                # source bisa object/dict
+                source_title = "-"
+                try:
+                    source_title = e.source.title
+                except Exception:
+                    try:
+                        src = e.get("source", None)
+                        if isinstance(src, dict):
+                            source_title = src.get("title", "-") or "-"
+                    except Exception:
+                        source_title = "-"
+
+                if link:
+                    all_entries.append({
+                        "title": title,
+                        "published": published,
+                        "link": link,
+                        "source": source_title
+                    })
+        except Exception:
+            pass
+
+        current_date = end_date_batch
+        time.sleep(0.15)  # lebih cepat dari 1 detik
+
+    return all_entries
+
+@st.cache_data(ttl=24*3600, show_spinner=False)
+def decode_url_once(gnews_link: str) -> str:
+    """
+    Decode 1 link Google News jadi URL asli. Dicache supaya tidak mengulang.
+    """
+    try:
+        decoded = gnewsdecoder(gnews_link)
+        return decoded["decoded_url"] if decoded.get("status") else gnews_link
+    except Exception:
+        return gnews_link
+
+def parse_tanggal_str(published: str) -> str:
+    """
+    Format tanggal output dd Mon YYYY kalau bisa. Kalau tidak, kembalikan mentah.
+    """
+    if not published:
+        return "-"
+    try:
+        pub_dt = datetime.strptime(published, "%a, %d %b %Y %H:%M:%S %Z")
+        return pub_dt.strftime("%d %b %Y")
+    except Exception:
+        return published
+
+def jalankan_scraper_streamlit_cepat(
+    WILAYAH: List[str],
+    LAPANGAN_USAHA: List[str],
+    START_DATE: dt.date,
+    END_DATE: dt.date,
+    decode_url: bool = True,
+    max_workers_search: int = 10,
+    max_workers_decode: int = 20
+):
+    WILAYAH = [w.strip() for w in WILAYAH if str(w).strip()]
+    LAPANGAN_USAHA = [u.strip() for u in LAPANGAN_USAHA if str(u).strip()]
+
+    if not WILAYAH or not LAPANGAN_USAHA:
+        st.warning("Wilayah dan/atau Lapangan Usaha kosong.")
+        st.session_state.scraped_data = pd.DataFrame(columns=["Tanggal","Judul","Sumber","Wilayah","Usaha","URL"])
         return
 
-    # Ambil URL asli & isi artikel (paralel dengan ThreadPoolExecutor)
-    with ThreadPoolExecutor(max_workers=20) as ex:
-        urls = list(ex.map(ambil_url_asli, semua_artikel))
-        teks = list(ex.map(lambda u: ekstrak_teks_artikel(u, LAPANGAN_USAHA, WILAYAH), urls))
+    combos: List[Tuple[str, str]] = list(itertools.product(WILAYAH, LAPANGAN_USAHA))
 
-    # Proses hasil scraping
+    progress = st.progress(0.0)
+    status = st.empty()
+
+    # 1) Search paralel per kombinasi
+    done = 0
+    results_raw: List[Tuple[str, str, List[Dict[str, Any]]]] = []
+
+    with ThreadPoolExecutor(max_workers=max_workers_search) as ex:
+        future_map = {}
+        for (w, u) in combos:
+            keyword = f'"{w}"+"{u}"'
+            fut = ex.submit(cached_gnews_search, keyword, START_DATE, END_DATE)
+            future_map[fut] = (w, u)
+
+        for fut in as_completed(future_map):
+            w, u = future_map[fut]
+            try:
+                entries = fut.result() or []
+            except Exception:
+                entries = []
+            results_raw.append((w, u, entries))
+
+            done += 1
+            progress.progress(done / max(1, len(combos)))
+            status.write(f"🔎 Mencari berita: {done}/{len(combos)} kombinasi...")
+
+    # 2) DEDUP berdasarkan link + gabungkan wilayah/usaha yang menemukan link tsb
+    by_link: Dict[str, Dict[str, Any]] = {}
+    for w, u, entries in results_raw:
+        for e in entries:
+            link = e.get("link", "")
+            if not link:
+                continue
+
+            if link not in by_link:
+                by_link[link] = {
+                    "Tanggal": parse_tanggal_str(e.get("published", "")),
+                    "Judul": e.get("title", "-") or "-",
+                    "Sumber": e.get("source", "-") or "-",
+                    "Wilayah": set([w]),
+                    "Usaha": set([u]),
+                    "GNewsLink": link,
+                }
+            else:
+                by_link[link]["Wilayah"].add(w)
+                by_link[link]["Usaha"].add(u)
+
+    if not by_link:
+        progress.empty()
+        status.empty()
+        st.warning("Tidak ada artikel ditemukan.")
+        st.session_state.scraped_data = pd.DataFrame(columns=["Tanggal","Judul","Sumber","Wilayah","Usaha","URL"])
+        return
+
+    status.write(f"🔗 Total artikel unik (sebelum decode URL): {len(by_link)}")
+
+    # 3) Decode URL paralel (opsional)
+    decoded_map: Dict[str, str] = {}
+    if decode_url:
+        gnews_links = list(by_link.keys())
+
+        done = 0
+        progress.progress(0.0)
+        with ThreadPoolExecutor(max_workers=max_workers_decode) as ex:
+            future_map = {ex.submit(decode_url_once, ln): ln for ln in gnews_links}
+            for fut in as_completed(future_map):
+                ln = future_map[fut]
+                try:
+                    decoded_map[ln] = fut.result()
+                except Exception:
+                    decoded_map[ln] = ln
+
+                done += 1
+                progress.progress(done / max(1, len(gnews_links)))
+                status.write(f"🔓 Decode URL: {done}/{len(gnews_links)} ...")
+    else:
+        decoded_map = {ln: ln for ln in by_link.keys()}
+
+    # 4) Build records final
     records = []
-    for entry, url, result in zip(semua_artikel, urls, teks):
-        if not result: 
-            continue
+    for gnews_link, obj in by_link.items():
+        records.append({
+            "Tanggal": obj["Tanggal"],
+            "Judul": obj["Judul"],
+            "Sumber": obj["Sumber"],
+            "Wilayah": ", ".join(sorted(obj["Wilayah"])),
+            "Usaha": ", ".join(sorted(obj["Usaha"])),
+            "URL": decoded_map.get(gnews_link, gnews_link),
+        })
 
-        # Parsing tanggal publikasi
-        try:
-            pub_dt = datetime.strptime(entry.published, "%a, %d %b %Y %H:%M:%S %Z")
-            tanggal = pub_dt.strftime("%d %b %Y")
-        except:
-            tanggal = entry.published
+    df = pd.DataFrame(records)
+    st.session_state.scraped_data = df
 
-        # Ringkas teks dengan Gemini, gunakan wilayah & usaha yang match
-        ringkasan = ringkas_dengan_gemini(
-            result["text"],
-            ", ".join(result["matches"]["wilayah"]),
-            ", ".join(result["matches"]["usaha"])
-        )
-
-        # Hanya simpan artikel relevan
-        if "TIDAK RELEVAN" not in ringkasan.strip().upper():
-            records.append({
-                "Tanggal": tanggal,
-                "Judul": entry.title,
-                "Sumber": getattr(entry, "source", {}).title if hasattr(entry, "source") else "-",
-                "Wilayah": ", ".join(result["matches"]["wilayah"]),
-                "Usaha": ", ".join(result["matches"]["usaha"]),
-                "Ringkasan": ringkasan,
-                "URL": url
-            })
-
-    # Simpan hasil ke session_state agar bisa ditampilkan ulang
-    st.session_state.scraped_data = pd.DataFrame(records)
-
-    # Info jumlah artikel yang berhasil diproses
-    st.success(f"✅ Artikel terproses: {len(records)}")
+    progress.empty()
+    status.empty()
+    st.success(f"✅ Artikel terproses (unik): {len(df)}")
 
 # ============================================================
-# 5. STREAMLIT UI
+# 6. STREAMLIT UI - TAMPILAN SAMA PERSIS DENGAN SEBELUMNYA
 # ============================================================
 
 # --- A. Input Data Wilayah dan Lapangan Usaha ---
-df_usaha = pd.read_csv("https://docs.google.com/spreadsheets/d/1cSISqNtyiGiyZ4nqTrTxBWIO7U98RBS5Z9ehBMWadYo/export?format=csv&gid=233383135")
-df_wilayah = pd.read_csv("https://docs.google.com/spreadsheets/d/1cSISqNtyiGiyZ4nqTrTxBWIO7U98RBS5Z9ehBMWadYo/export?format=csv&gid=0")
-# Dropdown hanya ambil nama kolom (judul lapangan usaha)
+@st.cache_data(ttl=3600, show_spinner=False)
+def load_csv(url: str) -> pd.DataFrame:
+    return pd.read_csv(url)
+
+df_usaha = load_csv("https://docs.google.com/spreadsheets/d/1cSISqNtyiGiyZ4nqTrTxBWIO7U98RBS5Z9ehBMWadYo/export?format=csv&gid=233383135")
+df_wilayah = load_csv("https://docs.google.com/spreadsheets/d/1cSISqNtyiGiyZ4nqTrTxBWIO7U98RBS5Z9ehBMWadYo/export?format=csv&gid=0")
+
 daftar_usaha = df_usaha.columns.tolist()
 daftar_wilayah = df_wilayah.columns.tolist()
 
 # --- B. Konfigurasi halaman ---
 st.set_page_config(page_title="Scraper Berita PDRB", layout="wide")
 
-# --- C. CSS custom ---
+# --- C. CSS custom (SAMA) ---
 st.markdown(
     """
     <style>
@@ -332,18 +375,18 @@ st.markdown(
             margin: 0 !important;
             line-height: 1; }
         .centered-subtitle {
-            text-align: center; 
-            font-size: 23px !important; 
+            text-align: center;
+            font-size: 23px !important;
             font-weight: normal;
             margin: 0 !important;
-            color: #555; 
+            color: #555;
             line-height: 1; }
 
         /* ===== FINAL OVERRIDE (HARUS DI BAWAH) =====*/
         div[data-baseweb="select"] > div {
-            color: #000 !important;         /* memastikan teks/value tetap terlihat */
-            background: #FFF !important;     /* memastikan latar tetap putih */
-            padding: 4px 8px !important;     /* konsisten dengan tinggi kontrol */
+            color: #000 !important;
+            background: #FFF !important;
+            padding: 4px 8px !important;
             line-height: 1.4 !important;
         }
     </style>
@@ -351,11 +394,10 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# --- D. Logo ---
+# --- D. Logo (SAMA) ---
 with open("Logo.png", "rb") as f:
     encoded = base64.b64encode(f.read()).decode()
 
-# Sisipkan logo di pojok kiri atas
 st.markdown(
     f"""
     <style>
@@ -373,8 +415,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# --- E. Judul ---
-# Tambah jarak agar judul tidak menabrak logo
+# --- E. Judul (SAMA) ---
 st.markdown("<div style='padding-top:30px'></div>", unsafe_allow_html=True)
 st.markdown(
     """
@@ -385,15 +426,22 @@ st.markdown(
 )
 st.markdown("<div style='padding-top:15px'></div>", unsafe_allow_html=True)
 
-# --- F. Kotak Input (Wilayah, Lapangan Usaha, Periode) ---
+# --- F. Kotak Input (SAMA) ---
 col1, col2, _, col3, _, col4, col5 = st.columns([0.8, 4, 0.2, 4, 0.2, 4, 0.8])
+
 with col2:
     st.markdown("**Wilayah**")
     if st.session_state.get("wilayah_mode", "Opsi") == "Opsi":
         wilayah_input = st.selectbox("Pilih Wilayah", daftar_wilayah, index=0, label_visibility="collapsed")
     else:
         wilayah_input = st.text_input("Masukkan Wilayah Manual", "", label_visibility="collapsed")
-    wilayah_mode = st.radio("Metode Input Wilayah", ["Opsi", "Manual"], horizontal=True, key="wilayah_mode", label_visibility="collapsed")
+    wilayah_mode = st.radio(
+        "Metode Input Wilayah",
+        ["Opsi", "Manual"],
+        horizontal=True,
+        key="wilayah_mode",
+        label_visibility="collapsed"
+    )
     scrape_button = st.button("🔍 Mulai Scraping", key="scrape_button")
 
 with col3:
@@ -402,11 +450,18 @@ with col3:
         usaha_input = st.selectbox("Pilih Lapangan Usaha", daftar_usaha, index=0, label_visibility="collapsed")
     else:
         usaha_input = st.text_input("Masukkan Usaha Manual", "", label_visibility="collapsed")
-    usaha_mode = st.radio("Metode Input Usaha", ["Opsi", "Manual"], horizontal=True, key="usaha_mode", label_visibility="collapsed" )
+    usaha_mode = st.radio(
+        "Metode Input Usaha",
+        ["Opsi", "Manual"],
+        horizontal=True,
+        key="usaha_mode",
+        label_visibility="collapsed"
+    )
 
 with col4:
     st.markdown("**Periode Tanggal**")
-    periode = st.date_input("",
+    periode = st.date_input(
+        "",
         label_visibility="collapsed",
         key="Tanggal",
         value=(dt.date(2025, 8, 19), dt.date(2025, 8, 28)),
@@ -416,33 +471,49 @@ with col4:
         start_date, end_date = periode
     else:
         st.error("⚠️ Harap pilih rentang tanggal.")
+        start_date, end_date = dt.date.today() - dt.timedelta(days=7), dt.date.today()
+
+# Toggle decode URL (cepat vs akurat)
+# (Ini tidak mengubah tampilan utama; cuma opsi kecil tambahan di bawah filter.)
+decode_url_toggle = st.checkbox("Decode URL asli (lebih lambat)", value=True)
 
 # --- G. DataFrame Kosong Awal ---
 if "scraped_data" not in st.session_state:
     st.session_state.scraped_data = pd.DataFrame(
-        columns=["Tanggal","Judul","Sumber","Wilayah","Usaha","Ringkasan","URL"]
+        columns=["Tanggal", "Judul", "Sumber", "Wilayah", "Usaha", "URL"]
     )
 
-# --- H. Jalankan Scraper ---
+# --- H. Jalankan Scraper (VERSI CEPAT) ---
 if scrape_button:
+    # Wilayah
     if wilayah_input:
         wilayah_key = wilayah_input.strip()
         if wilayah_mode == "Opsi" and wilayah_key in df_wilayah.columns:
             WILAYAH = df_wilayah[wilayah_key].dropna().astype(str).tolist()
         else:
-            WILAYAH = [wilayah_input.strip()]
+            WILAYAH = [wilayah_key]
     else:
         WILAYAH = []
 
+    # Usaha
     if usaha_input:
         usaha_key = usaha_input.strip()
         if usaha_mode == "Opsi" and usaha_key in df_usaha.columns:
             LAPANGAN_USAHA = df_usaha[usaha_key].dropna().astype(str).tolist()
         else:
-            LAPANGAN_USAHA = [usaha_input.strip()]
+            LAPANGAN_USAHA = [usaha_key]
     else:
         LAPANGAN_USAHA = []
-    jalankan_scraper_streamlit(WILAYAH, LAPANGAN_USAHA, start_date, end_date)
+
+    jalankan_scraper_streamlit_cepat(
+        WILAYAH=WILAYAH,
+        LAPANGAN_USAHA=LAPANGAN_USAHA,
+        START_DATE=start_date,
+        END_DATE=end_date,
+        decode_url=decode_url_toggle,
+        max_workers_search=10,
+        max_workers_decode=20
+    )
 
 # --- I. Tampilkan Data ---
 show_aggrid(st.session_state.scraped_data)
