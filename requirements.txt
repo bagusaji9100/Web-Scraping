@@ -1,10 +1,10 @@
 streamlit
-google-generativeai
+pandas
+numpy
 pygooglenews
 googlenewsdecoder
-trafilatura
-pandas
-openpyxl
-xlsxwriter
 streamlit-aggrid
-
+xlsxwriter
+plotly
+rapidfuzz
+tenacity
